@@ -1,52 +1,63 @@
 pipeline {
-    agent any
+    agent any  // 选择任意可用的 agent（可以改为指定的 Docker 容器）
+
     environment {
-        DOCKER_IMAGE = "huzigege/my-go-app"
-        DOCKER_CREDENTIALS = credentials('docker-hub-cred')
+        GO111MODULE = 'on'  // 启用 Go Modules
+        GOPROXY = 'https://proxy.golang.org,direct' // 代理加速下载
     }
+
     stages {
-        stage('Checkout') {
+        stage('Checkout Code') {
             steps {
-                git url: 'https://github.com/your-repo/my-go-app.git', branch: 'main'
+                git branch: 'main', 
+                    credentialsId: 'github-credentials', 
+                    url: 'https://github.com/zihoulaai/my-go-app.git'
             }
         }
+
+        stage('Setup Go') {
+            steps {
+                script {
+                    def goVersion = "1.20"  // 选择 Golang 版本
+                    sh "wget https://go.dev/dl/go${goVersion}.linux-amd64.tar.gz -O go.tar.gz"
+                    sh "sudo tar -C /usr/local -xzf go.tar.gz"
+                    sh "export PATH=\$PATH:/usr/local/go/bin"
+                    sh "go version"
+                }
+            }
+        }
+
+        stage('Install Dependencies') {
+            steps {
+                sh 'go mod tidy'
+            }
+        }
+
+        stage('Build') {
+            steps {
+                sh 'go build -o app'
+            }
+        }
+
         stage('Test') {
             steps {
-                sh 'go test -v ./...'
+                sh 'go test ./... -v'
             }
         }
-        stage('Build Docker Image') {
+
+        stage('Publish Artifact') {
             steps {
-                script {
-                    docker.build("${DOCKER_IMAGE}:${env.BUILD_NUMBER}")
-                }
-            }
-        }
-        stage('Push Image') {
-            steps {
-                script {
-                    docker.withRegistry('https://registry.hub.docker.com', 'docker-hub-cred') {
-                        docker.image("${DOCKER_IMAGE}:${env.BUILD_NUMBER}").push()
-                    }
-                }
-            }
-        }
-        stage('Deploy') {
-            when {
-                branch 'main'  # 仅 main 分支触发部署
-            }
-            steps {
-                sh """
-                    docker stop my-go-app || true
-                    docker rm my-go-app || true
-                    docker run -d --name my-go-app -p 8080:8080 ${DOCKER_IMAGE}:${env.BUILD_NUMBER}
-                """
+                archiveArtifacts artifacts: 'app', fingerprint: true
             }
         }
     }
+
     post {
+        success {
+            echo 'Build completed successfully!'
+        }
         failure {
-            emailext body: '构建失败，请检查日志: ${BUILD_URL}', subject: 'CI/CD Pipeline Failed'
+            echo 'Build failed!'
         }
     }
 }
