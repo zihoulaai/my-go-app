@@ -1,5 +1,9 @@
 pipeline {
-    agent any  // 选择任意可用的 agent（可以改为指定的 Docker 容器）
+    agent {
+        docker {
+            image 'golang:1.23'
+        }
+    }
 
     environment {
         GO111MODULE = 'on'  // 启用 Go Modules
