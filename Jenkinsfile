@@ -4,6 +4,9 @@ pipeline {
             image 'golang:1.20'
         }
     }
+    environment {
+        PATH = "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/sbin"
+    }
     stages {
         stage('Checkout Code') {
             steps {
