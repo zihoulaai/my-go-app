@@ -42,11 +42,11 @@ pipeline {
                         sh 'go test ./... -v'
                     }
                 }
-                stage('Static Code Analysis') {
-                    steps {
-                        sh 'golangci-lint run || true' // 允许 lint 失败但不中断 CI
-                    }
-                }
+                // stage('Static Code Analysis') {
+                //     steps {
+                //         sh 'golangci-lint run || true' // 允许 lint 失败但不中断 CI
+                //     }
+                // }
             }
         }
 
