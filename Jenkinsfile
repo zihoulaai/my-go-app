@@ -53,7 +53,7 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 sh """
-                docker build -t ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG} .
+                /usr/local/bin/docker build -t ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG} .
                 """
             }
         }
@@ -61,7 +61,7 @@ pipeline {
         stage('Push Docker Image') {
             steps {
                 withDockerRegistry([credentialsId: 'docker-hub-credentials', url: '']) {
-                    sh "docker push ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}"
+                    sh "/usr/local/bin/docker push ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}"
                 }
             }
         }
