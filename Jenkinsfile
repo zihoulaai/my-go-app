@@ -29,11 +29,11 @@ pipeline {
             }
         }
 
-        stage('Build') {
-            steps {
-                sh 'go build -o app'
-            }
-        }
+        // stage('Build') {
+        //     steps {
+        //         sh 'go build -o app'
+        //     }
+        // }
 
         stage('Test & Static Analysis') {
             parallel {
