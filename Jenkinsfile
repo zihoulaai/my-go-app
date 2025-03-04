@@ -30,7 +30,7 @@ pipeline {
             steps {
                 script {
                     try {
-                        sh '/usr/local/bin/docker build -t $IMAGE_NAME:$IMAGE_TAG .'
+                        sh 'docker build -t $IMAGE_NAME:$IMAGE_TAG .'
                     } catch (Exception e) {
                         error "Docker Build Failed: ${e.message}"
                     }
