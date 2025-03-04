@@ -1,143 +1,71 @@
 pipeline {
     agent any
-    
+
     environment {
         REPO_URL = 'https://github.com/zihoulaai/my-go-app.git'
         IMAGE_NAME = 'huzigege/my-go-app'
         IMAGE_TAG = 'latest'
-        DOCKER_CREDENTIALS_ID = 'docker-hub-credentials'
+        DOCKER_CREDENTIALS_ID = 'docker-hub-credentials'  // 这里使用 Token
+        DOCKER_USER = 'huzigege'  // 你的 Docker Hub 用户名
     }
-    
+
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', 
-                    credentialsId: 'github-credentials', 
-                    url: env.REPO_URL
+                checkout([
+                    $class: 'GitSCM',
+                    branches: [[name: '*/main']],
+                    doGenerateSubmoduleConfigurations: false,
+                    extensions: [[$class: 'WipeWorkspace']],  
+                    submoduleCfg: [],
+                    userRemoteConfigs: [[
+                        url: env.REPO_URL,
+                        credentialsId: 'github-credentials'
+                    ]]
+                ])
             }
         }
-        
+
         stage('Build Docker Image') {
             steps {
                 script {
-                    sh '/usr/local/bin/docker build -t $IMAGE_NAME:$IMAGE_TAG .'
+                    try {
+                        sh '/usr/local/bin/docker build -t $IMAGE_NAME:$IMAGE_TAG .'
+                    } catch (Exception e) {
+                        error "Docker Build Failed: ${e.message}"
+                    }
                 }
             }
         }
-        
-        // stage('Login to Docker Hub') {
-        //     steps {
-        //         script {
-        //             withCredentials([string(credentialsId: 'docker-hub-credentials', variable: 'DOCKER_TOKEN')]) {
-        //                 sh "echo $DOCKER_TOKEN | /usr/local/bin/docker login --username your-dockerhub-username --password-stdin"
-        //             }
-        //         }
-        //     }
-        // }
-        
+
         stage('Push to Docker Hub') {
             steps {
-                script {
-                    sh '/usr/local/bin/docker push $IMAGE_NAME:$IMAGE_TAG'
+                withCredentials([string(credentialsId: env.DOCKER_CREDENTIALS_ID, variable: 'DOCKER_TOKEN')]) {
+                    sh '''
+                        echo "$DOCKER_TOKEN" | docker login -u "$DOCKER_USER" --password-stdin
+                        docker push $IMAGE_NAME:$IMAGE_TAG
+                        docker logout
+                    '''
                 }
             }
         }
-        
+
         stage('Cleanup') {
             steps {
                 script {
-                    sh '/usr/local/bin/docker rmi $IMAGE_NAME:$IMAGE_TAG'
+                    sh 'docker rmi $IMAGE_NAME:$IMAGE_TAG'
                 }
             }
         }
     }
+
+    post {
+        always {
+            sh 'docker logout'
+            cleanWs()
+        }
+        failure {
+            echo 'Build failed, please check logs!'
+        }
+    }
 }
-
-// pipeline {
-//     agent any
-
-//     environment {
-//         GOROOT='/usr/local/opt/go/libexec'
-//         PATH="${GOROOT}/bin:${env.PATH}"
-//         IMAGE_NAME="my-go-app"
-//         IMAGE_TAG="latest"
-//         REGISTRY="docker.io/huzigege"
-//     }
-
-//     options {
-//         timeout(time: 30, unit: 'MINUTES') // 限制 CI/CD 超时时间
-//         disableConcurrentBuilds() // 禁止并发执行
-//     }
-
-//     stages {
-//         stage('Checkout Code') {
-//             steps {
-//                 git branch: 'main', 
-//                     credentialsId: 'github-credentials', 
-//                     url: 'https://github.com/zihoulaai/my-go-app.git'
-//             }
-//         }
-
-//         stage('Cache Dependencies') {
-//             steps {
-//                 sh 'go mod download'
-//             }
-//         }
-
-//         // stage('Build') {
-//         //     steps {
-//         //         sh 'go build -o app'
-//         //     }
-//         // }
-
-//         stage('Test & Static Analysis') {
-//             parallel {
-//                 stage('Unit Tests') {
-//                     steps {
-//                         sh 'go test ./... -v'
-//                     }
-//                 }
-//                 // stage('Static Code Analysis') {
-//                 //     steps {
-//                 //         sh 'golangci-lint run || true' // 允许 lint 失败但不中断 CI
-//                 //     }
-//                 // }
-//             }
-//         }
-
-//         stage('Build Docker Image') {
-//             steps {
-//                 sh """
-//                 /usr/local/bin/docker build -t ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG} .
-//                 """
-//             }
-//         }
-
-//         stage('Push Docker Image') {
-//             steps {
-//                 withDockerRegistry([credentialsId: 'docker-hub-credentials', url: '']) {
-//                     sh "/usr/local/bin/docker push ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}"
-//                 }
-//             }
-//         }
-
-//         // stage('Deploy to Kubernetes') {
-//         //     steps {
-//         //         withKubeConfig([credentialsId: 'k8s-credentials']) {
-//         //             sh """
-//         //             kubectl set image deployment/${IMAGE_NAME} ${IMAGE_NAME}=${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}
-//         //             """
-//         //         }
-//         //     }
-//         // }
-//     }
-
-//     post {
-//         success {
-//             echo "CI/CD Pipeline executed successfully!"
-//         }
-//         failure {
-//             echo "Pipeline failed!"
-//         }
-//     }
-// }
