@@ -7,7 +7,6 @@ pipeline {
         IMAGE_NAME="my-go-app"
         IMAGE_TAG="latest"
         REGISTRY="docker.io/huzigege"
-        DOCKER_HOST=unix:///Users/$(wuliuqi)/.docker/run/docker.sock
     }
 
     options {
