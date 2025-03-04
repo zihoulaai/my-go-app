@@ -29,7 +29,7 @@ pipeline {
             steps {
                 script {
                     withCredentials([string(credentialsId: 'docker-hub-credentials', variable: 'DOCKER_TOKEN')]) {
-                        sh "echo $DOCKER_TOKEN | docker login --username your-dockerhub-username --password-stdin"
+                        sh "echo $DOCKER_TOKEN | /usr/local/bin/docker login --username your-dockerhub-username --password-stdin"
                     }
                 }
             }
